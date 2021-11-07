@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<modification>
+	<name>Cart Keeper add-on Cart Queries Cache</name>
+	<version>1.24</version>
+	<author>AlexDW</author>
+	<link>https://opencartforum.com/profile/688391-alexdw/?do=content&amp;type=downloads_file</link>
+	<code>cartkeeper-cqc-adw</code>
+	<file path="system/library/cart/cart.php|system/library/cart.php">
+		<operation>
+		<search><![CDATA[
+$this->ckflag = false;
+			]]></search>
+			<add position="before" ><![CDATA[
+// CartKeeperCQC
+		$this->cache = $registry->get('cache');
+// CartKeeperCQC
+			]]></add>
+		</operation>
+
+		<operation>
+		<search><![CDATA[
+public function ckeeper() {
+			]]></search>
+			<add position="before" ><![CDATA[
+// CartKeeperCQC
+	public function ckeeperClearCache() {
+		if ($this->ck) {
+			$ckeeper=$this->ckeeper();
+			$ckche = 'ckeeper_cart.' . $this->db->escape($ckeeper);
+			$this->cache->delete($ckche);
+		}
+	}
+// CartKeeperCQC
+			]]></add>
+		</operation>
+
+		<operation>
+		<search index="0"><![CDATA[
+$ckeeper = $this->ckeeper();
+			]]></search>
+			<add position="replace" ><![CDATA[
+// CartKeeperCQC
+		$ckeeper= $this->ckeeper();
+        $ckche = 'ckeeper_cart.' . $this->db->escape($ckeeper);
+        $ckche_product_data = $this->cache->get($ckche);
+		if (!empty($ckche_product_data)) { return $ckche_product_data; }
+// CartKeeperCQC
+			]]></add>
+		</operation>
+
+		<operation>
+		<search><![CDATA[
+$ckeeper = $this->ckeeper();
+			]]></search>
+			<add position="after" ><![CDATA[
+// CartKeeperCQC
+		$this->ckeeperClearCache();
+// CartKeeperCQC
+			]]></add>
+		</operation>
+
+		<operation>
+		<search index="0"><![CDATA[
+return $product_data;
+			]]></search>
+			<add position="before" ><![CDATA[
+// CartKeeperCQC
+if ($this->ck) {
+        $ckche = 'ckeeper_cart.' . $this->db->escape($ckeeper);
+        $this->cache->set($ckche,$product_data);
+}
+// CartKeeperCQC
+			]]></add>
+		</operation>
+	</file>
+
+	<file path="admin/model/extension/module/cartkeeper.php|admin/model/module/cartkeeper.php">
+		<operation>
+		<search><![CDATA[
+public function deleteCart
+			]]></search>
+			<add position="before" ><![CDATA[
+// CartKeeperCQC
+	public function getSid() {
+		$query = $this->db->query("SELECT DISTINCT(`session_id`) FROM `" . DB_PREFIX . "cart` ");
+		$data = array();
+			foreach ($query->rows as $result) {
+				$data[] = $result['session_id'];
+			}
+		return $data;
+	}
+// CartKeeperCQC
+			]]></add>
+		</operation>
+	</file>
+	<file path="admin/controller/catalog/cartkeeper_list.php">
+		<operation>
+		<search><![CDATA[
+public function index()
+			]]></search>
+			<add position="before" ><![CDATA[
+// CartKeeperCQC
+	public function ClearCache() {
+	if (VERSION >= '2.3') {
+		$this->load->model('extension/module/cartkeeper');
+		$sid = $this->model_extension_module_cartkeeper->getSid();
+	} else {
+		$this->load->model('module/cartkeeper');
+		$sid = $this->model_module_cartkeeper->getSid();
+	}
+		
+		$files = glob(DIR_CACHE . 'cache.ckeeper_cart*');
+		if (!empty($files)) {
+			foreach($files as $file){
+				if (is_file($file)) {
+					$name = pathinfo($file);
+					$name = substr($name['filename'], strlen('cache.ckeeper_cart.'));
+					if (!in_array($name, $sid)) {
+						@unlink($file);
+					}
+				}
+			}
+		}
+	}
+// CartKeeperCQC
+			]]></add>
+		</operation>
+		<operation>
+		<search><![CDATA[
+$this->registry->set('cartkeeper'
+			]]></search>
+			<add position="before" ><![CDATA[
+// CartKeeperCQC
+		$this->ClearCache();
+// CartKeeperCQC
+			]]></add>
+		</operation>
+	</file>
+</modification>
